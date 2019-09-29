@@ -83,7 +83,7 @@ void sendData() {
   mySwitch.send(ROOM_ID, 4);
   mySwitch.send(h, 4);
   mySwitch.send(t, 4);
-  mySwitch.send(h + t, 4);
+  mySwitch.send(ROOM_ID + h + t, 4);
 }
 
 bool receiveApprove() {
