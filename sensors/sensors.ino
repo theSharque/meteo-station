@@ -114,15 +114,11 @@ bool receiveApprove() {
 
 void blinkLed(int count) {
   for (int i = 0; i < count; i++) {
-    blinkFast();
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(50);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(50);
   }
 
   delay(200);
-}
-
-void blinkFast() {
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(50);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(50);
 }
