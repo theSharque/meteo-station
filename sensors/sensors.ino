@@ -1,4 +1,4 @@
-#include "DHT.h"
+#include <DHT.h>
 #include <RCSwitch.h>
 
 /*
@@ -9,12 +9,12 @@
    1 - Read data
    2 - Send data
    3 - Can't read data from DHT
-   4 - 
+   4 - No approve received
 */
 
 #define ROOM_ID 1             // ID of the room (sensor)
 
-#define DHTPIN 2              // Digital pin connected to the DHT sensor
+#define DHTPIN 4              // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT11         // Type of DHT module
 #define RECINT 0              // 0 interupt = 2 pin for RC receiver
 #define SNDPIN 3              // Pin for RC sender
@@ -24,27 +24,36 @@ RCSwitch mySwitch = RCSwitch();
 
 int h;
 int t;
-int wait;
+long wait;
 
 void setup() {
   Serial.begin(9600);
-  Serial.print("Sensor start on room");
+  Serial.print("Sensor start on room: ");
   Serial.println(ROOM_ID);
-  
+
   mySwitch.enableTransmit(SNDPIN);
   mySwitch.enableReceive(RECINT);
   pinMode(LED_BUILTIN, OUTPUT);
+  h = t = wait = 0;
 }
 
 void loop() {
   if ( dhtRead() ) {
-    do {
-      delay(200);
+    for (int i = 0; i < 5; i++) {
       sendData();
-    } while (!receiveApprove());
+      delay(200);
+      wait = 20;
+      if ( receiveApprove() ) {
+        break;
+      }
+    }
   } else {
     blinkLed(3);
   }
+
+  Serial.print("Wait for ");
+  Serial.println(wait);
+  delay(wait);
 }
 
 bool dhtRead() {
@@ -52,7 +61,7 @@ bool dhtRead() {
   blinkLed(1);
 
   dht.begin();
-  delay(2000);
+  delay(500);
 
   float fh = dht.readHumidity();
   float ft = dht.readTemperature();
@@ -80,31 +89,42 @@ void sendData() {
   Serial.println("Send data to the base");
   blinkLed(2);
 
-  mySwitch.send(ROOM_ID, 4);
-  mySwitch.send(h, 4);
-  mySwitch.send(t, 4);
-  mySwitch.send(ROOM_ID + h + t, 4);
+  mySwitch.send(ROOM_ID, 15);
+  mySwitch.send(h, 16);
+  mySwitch.send(t, 17);
+  mySwitch.send(ROOM_ID + h + t, 18);
 }
 
 bool receiveApprove() {
+  int r, c;
+  long w;
+  r = w = c = 0;
+
   Serial.println("Receive approve");
-  for (int i = 0; i < 5; i++ ) {
-    if (mySwitch.available()) {
-      int room = mySwitch.getReceivedValue();
-      wait = mySwitch.getReceivedValue();
-      int crc = mySwitch.getReceivedValue();
-      if ( crc != room + wait) {
-        blinkLed(5);
-        Serial.println("Wrong CRC");
-        return false;
+  for (int i = 0; i < 10; i++ ) {
+    while (mySwitch.available()) {
+      switch (mySwitch.getReceivedBitlength()) {
+        case 15:
+          r = mySwitch.getReceivedValue();
+          break;
+        case 16:
+          w = mySwitch.getReceivedValue();
+          break;
+        case 17:
+          c = mySwitch.getReceivedValue();
+          break;
       }
 
-      Serial.println("Approved");
-      return true;
-    } else {
-      Serial.println("Wait 1 second");
-      delay(1000);
+      if ( c == r + w) {
+        if (r == ROOM_ID) {
+          Serial.println("Approved");
+          wait = w * 1000;
+          return true;
+        }
+      }
+      mySwitch.resetAvailable();
     }
+    delay(100);
   }
 
   Serial.println("No approve received");
