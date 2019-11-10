@@ -6,10 +6,9 @@
    Than we take a timeout and sleep
 
    Blinks:
-   1 - Read data
-   2 - Send data
+   1 - Read/Send data
+   2 - No approve received
    3 - Can't read data from DHT
-   4 - No approve received
 */
 
 #define ROOM_ID 1             // ID of the room (sensor)
@@ -73,8 +72,8 @@ bool dhtRead() {
 
     return false;
   } else {
-    h = int(fh * 100);
-    t = int(ft * 100);
+    h = int(fh * 10);
+    t = int(ft * 10);
 
     Serial.print("Data: h=");
     Serial.print(h);
@@ -87,7 +86,7 @@ bool dhtRead() {
 
 void sendData() {
   Serial.println("Send data to the base");
-  blinkLed(2);
+  blinkLed(1);
 
   mySwitch.send(ROOM_ID, 15);
   mySwitch.send(h, 16);
@@ -101,7 +100,7 @@ bool receiveApprove() {
   r = w = c = 0;
 
   Serial.println("Receive approve");
-  for (int i = 0; i < 10; i++ ) {
+  for (int i = 0; i < 50; i++ ) {
     while (mySwitch.available()) {
       switch (mySwitch.getReceivedBitlength()) {
         case 15:
@@ -128,7 +127,7 @@ bool receiveApprove() {
   }
 
   Serial.println("No approve received");
-  blinkLed(4);
+  blinkLed(2);
   return false;
 }
 
